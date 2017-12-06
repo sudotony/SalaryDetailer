@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace SalaryDetailer
 {
-    class Salary
+    public class Salary
     {
         private decimal _grossSalary;
         public decimal GrossSalary { get { return _grossSalary; } set { _grossSalary = value; } }
