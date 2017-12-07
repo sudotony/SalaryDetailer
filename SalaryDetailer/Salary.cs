@@ -8,39 +8,20 @@ namespace SalaryDetailer
 {
     public class Salary
     {
-        private decimal _grossSalary;
-        public decimal GrossSalary { get { return _grossSalary; } set { _grossSalary = value; } }
+        public decimal GrossSalary { get; set; }
+        public decimal SuperannuationPercentage { get; set; }
+        public char PayFrequency { get; set; }
+        public decimal TaxableIncome { get; set; }
+        public decimal Superannuation { get; set; }
+        public decimal MedicareLevy { get; set; }
+        public decimal BudgetRepairLevy { get; set; }
+        public decimal IncomeTax { get; set; }
+        public decimal NetIncome { get; set; }
+        public string PayPacket { get; set; }
 
-        private decimal _superannuationPercentage;
-        public decimal SuperannuationPercentage { get { return _superannuationPercentage; } set { _superannuationPercentage = value; } }
-
-        private char _payFrequency;
-        public char PayFrequency { get { return _payFrequency; } set { _payFrequency = value; } }
-
-        private decimal _taxableIncome;
-        public decimal TaxableIncome { get { return _taxableIncome; } set { _taxableIncome = value; } }
-
-        private decimal _superannuation;
-        public decimal Superannuation { get { return _superannuation; } set { _superannuation = value; } }
-
-        private decimal _medicareLevy;
-        public decimal MedicareLevy { get { return _medicareLevy; } set { _medicareLevy = value; } }
-
-        private decimal _budgetRepairLevy;
-        public decimal BudgetRepairLevy { get { return _budgetRepairLevy; } set { _budgetRepairLevy = value; } }
-
-        private decimal _incomeTax;
-        public decimal IncomeTax { get { return _incomeTax; } set { _incomeTax = value; } }
-
-        private decimal _netIncome;
-        public decimal NetIncome { get { return _netIncome; } set { _netIncome = value; } }
-
-        private string _payPacket;
-        public string PayPacket { get { return _payPacket; } set { _payPacket = value; } }
-
-        private List<CalculationRule> _medicareLevyRules;
-        private List<CalculationRule> _budgetRepairLevyRules;
-        private List<CalculationRule> _incomeTaxRules;
+        private readonly List<CalculationRule> _medicareLevyRules;
+        private readonly List<CalculationRule> _budgetRepairLevyRules;
+        private readonly List<CalculationRule> _incomeTaxRules;
 
         /*
          * A basic struct to store the calculation rules.
@@ -49,15 +30,15 @@ namespace SalaryDetailer
          */
         public struct CalculationRule
         {
-            public int lowerThreshold;
-            public int upperThreshold;
-            public string expression;
+            public int LowerThreshold;
+            public int UpperThreshold;
+            public string Expression;
 
             public CalculationRule(int p1, int p2, string p3)
             {
-                lowerThreshold = p1;
-                upperThreshold = p2;
-                expression = p3;
+                LowerThreshold = p1;
+                UpperThreshold = p2;
+                Expression = p3;
             }
         }
 
@@ -72,9 +53,9 @@ namespace SalaryDetailer
         {
             try
             {
-                _grossSalary = grossSalary;
-                _superannuationPercentage = superannuationPercentage;
-                _payFrequency = payFrequency;
+                GrossSalary = grossSalary;
+                SuperannuationPercentage = superannuationPercentage;
+                PayFrequency = payFrequency;
 
                 _medicareLevyRules = new List<CalculationRule>();
                 _budgetRepairLevyRules = new List<CalculationRule>();
@@ -104,7 +85,7 @@ namespace SalaryDetailer
         /*
          * This same function is used for all of the different Rule Files. All of the Rule Files have the same syntax and format.
          */
-        private void LoadCalculationRules(string filepath, ref List<CalculationRule> calculationRules)
+        private static void LoadCalculationRules(string filepath, ref List<CalculationRule> calculationRules)
         {
             try
             {
@@ -115,11 +96,11 @@ namespace SalaryDetailer
                     while (!reader.EndOfStream)
                     {
                         var line = reader.ReadLine();
-                        var values = line.Split(',');
+                        var values = string.IsNullOrEmpty(line) ? string.Empty.Split(',') : line.Split(',');
 
                         try
                         {
-                            CalculationRule calculationRule = new CalculationRule(int.Parse(values[0]), int.Parse(values[1]), values[2]);
+                            var calculationRule = new CalculationRule(int.Parse(values[0]), int.Parse(values[1]), values[2]);
                             calculationRules.Add(calculationRule);
                         }
                         catch (Exception ex)
@@ -144,7 +125,7 @@ namespace SalaryDetailer
          */
         private void CalculateTaxableIncome()
         {
-            _taxableIncome = _grossSalary / ((100 + _superannuationPercentage) / 100);
+            TaxableIncome = GrossSalary / ((100 + SuperannuationPercentage) / 100);
         }
 
         /*
@@ -152,22 +133,23 @@ namespace SalaryDetailer
          */
         private void CalculateSuperannuation()
         {
-            _superannuation = _grossSalary - _taxableIncome;
+            Superannuation = GrossSalary - TaxableIncome;
         }
 
         /*
          * The Rule Files have been designed in such a way that the same function can perform the calculations for all three Medicare, Budget and Income.
          */
-        private void CalculateRule(List<CalculationRule> rules, ref decimal deduction)
+        private decimal CalculateRule(IEnumerable<CalculationRule> rules)
         {
-            foreach (CalculationRule cr in rules)
+            decimal deduction = 0;
+            foreach (var cr in rules)
             {
                 // where the upper threshold is 0, there is no upper limit 
-                if (_taxableIncome >= cr.lowerThreshold && (_taxableIncome <= cr.upperThreshold || cr.upperThreshold == 0))
+                if (TaxableIncome >= cr.LowerThreshold && (TaxableIncome <= cr.UpperThreshold || cr.UpperThreshold == 0))
                 {
-                    string expression = cr.expression.Replace("TI", _taxableIncome.ToString());
+                    var expression = cr.Expression.Replace("TI", TaxableIncome.ToString(CultureInfo.InvariantCulture));
 
-                    DataTable dt = new DataTable();
+                    var dt = new DataTable();
                     try
                     {
                         // where the expression 0, there is no formula to compute. 
@@ -186,6 +168,7 @@ namespace SalaryDetailer
                     break;
                 }
             }
+            return deduction;
         }
 
         /*
@@ -193,7 +176,7 @@ namespace SalaryDetailer
          */
         private void CalculateMedicareLevy()
         {
-            CalculateRule(_medicareLevyRules, ref _medicareLevy);
+            MedicareLevy = CalculateRule(_medicareLevyRules);
         }
 
         /*
@@ -201,7 +184,7 @@ namespace SalaryDetailer
          */
         private void CalculateBudgetRepairLevy()
         {
-            CalculateRule(_budgetRepairLevyRules, ref _budgetRepairLevy);
+            BudgetRepairLevy = CalculateRule(_budgetRepairLevyRules);
         }
 
         /*
@@ -209,7 +192,7 @@ namespace SalaryDetailer
          */
         private void CalculateIncomeTax()
         {
-            CalculateRule(_incomeTaxRules, ref _incomeTax);
+            IncomeTax = CalculateRule(_incomeTaxRules);
         }
 
         /*
@@ -217,12 +200,12 @@ namespace SalaryDetailer
          */
         private void CalculateNetIncome()
         {
-            decimal netIncome = _grossSalary - _superannuation - _medicareLevy - _budgetRepairLevy - _incomeTax;
-            _netIncome = netIncome;
+            var netIncome = GrossSalary - Superannuation - MedicareLevy - BudgetRepairLevy - IncomeTax;
+            NetIncome = netIncome;
         }
 
         /*
-         * This pay packet function assumes that the pay packet character has been validated and massaged (ToUpper).
+         * This pay packet function assumes that the pay packet character has been validated (W,F,M) and massaged (ToUpper).
          */
         private void CalculatePayPacket()
         {
@@ -230,18 +213,20 @@ namespace SalaryDetailer
             switch (PayFrequency)
             {
                 case 'W':
-                    payPacket = ((decimal)((NetIncome / 365) * 7)).ToString("C", CultureInfo.CurrentCulture) + " per week";
+                    payPacket = ((NetIncome / 365) * 7).ToString("C", CultureInfo.CurrentCulture) + " per week";
                     break;
                 case 'F':
-                    payPacket = ((decimal)((NetIncome / 365) * 14)).ToString("C", CultureInfo.CurrentCulture) + " per fortnight";
+                    payPacket = ((NetIncome / 365) * 14).ToString("C", CultureInfo.CurrentCulture) + " per fortnight";
                     break;
                 case 'M':
+                    payPacket = (NetIncome / 12).ToString("C", CultureInfo.CurrentCulture) + " per month";
+                    break;
                 default:
-                    payPacket = ((decimal)(NetIncome / 12)).ToString("C", CultureInfo.CurrentCulture) + " per month";
+                    payPacket = "";
                     break;
             }
 
-            _payPacket = payPacket;
+            PayPacket = payPacket;
         }
     }
 }

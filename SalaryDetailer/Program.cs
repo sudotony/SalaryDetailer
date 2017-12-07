@@ -6,9 +6,9 @@ using System.Diagnostics;
 
 namespace SalaryDetailer
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main()
         {
             /*
             * Read user input for salary package amount. 
@@ -16,7 +16,8 @@ namespace SalaryDetailer
             * try parse; loop whilst false.
             */
             Console.Write("Enter your salary package amount: ");
-            string input = Console.ReadLine();
+            var input = Console.ReadLine();
+            input = string.IsNullOrEmpty(input) ? string.Empty : input;
             input = input.Replace(CultureInfo.CurrentUICulture.NumberFormat.NumberGroupSeparator, "");
             input = input.Replace(CultureInfo.CurrentUICulture.NumberFormat.CurrencySymbol, "");
 
@@ -28,6 +29,7 @@ namespace SalaryDetailer
                 Console.ForegroundColor = ConsoleColor.Gray;
                 Console.Write("Enter your salary package amount: ");
                 input = Console.ReadLine();
+                input = string.IsNullOrEmpty(input) ? string.Empty : input;
                 input = input.Replace(CultureInfo.CurrentUICulture.NumberFormat.NumberGroupSeparator, "");
                 input = input.Replace(CultureInfo.CurrentUICulture.NumberFormat.CurrencySymbol, "");
             }
@@ -38,50 +40,53 @@ namespace SalaryDetailer
             * Validate input; loop whilst false.
             */
             Console.Write("Enter your pay frequency (W for weekly, F for fortnightly, M for monthly): ");
-            char payFreq = Console.ReadLine().ToUpper()[0];
+            input = Console.ReadLine();
+            var payFreq = string.IsNullOrEmpty(input) ? '\0' : input.ToUpper()[0];
             while (payFreq != 'W' && payFreq != 'F' && payFreq != 'M')
             {
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.Write("Please enter a valid pay frequency.\n");
                 Console.ForegroundColor = ConsoleColor.Gray;
                 Console.Write("Enter your pay frequency (W for weekly, F for fortnightly, M for monthly): ");
-                payFreq = Console.ReadLine().ToUpper()[0];
+
+                input = Console.ReadLine();
+                payFreq = string.IsNullOrEmpty(input) ? '\0' : input.ToUpper()[0];
             }
 
             /*
             * Get super percentage from App Settings. Considering that the RuleFiles are separated, perhaps the Super Amount should be too?
             * Ideally, super percentage would be another user input, but this is to spec.
             */
-            decimal.TryParse(ConfigurationManager.AppSettings["superannuationPercentage"], out decimal superannuationPercentage);
+            decimal.TryParse(ConfigurationManager.AppSettings["superannuationPercentage"], out var superannuationPercentage);
 
             /*
              * Paths to rule files
              */
-            string folder = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName) + @"\RuleFiles\";
-            string medicareLevyRulesPath = folder + "MedicareLevyRules.csv";
-            string budgetRepairLevyRulesPath = folder + "BudgetRepairLevyRules.csv";
-            string incomeTaxPath = folder + "IncomeTaxRules.csv";
+            var folder = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName) + @"\RuleFiles\";
+            var medicareLevyRulesPath = folder + "MedicareLevyRules.csv";
+            var budgetRepairLevyRulesPath = folder + "BudgetRepairLevyRules.csv";
+            var incomeTaxPath = folder + "IncomeTaxRules.csv";
 
             /*
             * Instantiate new Salary class / object
             * Calculations are performed on construction
             */
-            Salary Salary = new Salary(grossSalary, superannuationPercentage, payFreq, medicareLevyRulesPath, budgetRepairLevyRulesPath, incomeTaxPath);
+            var salary = new Salary(grossSalary, superannuationPercentage, payFreq, medicareLevyRulesPath, budgetRepairLevyRulesPath, incomeTaxPath);
 
             Console.WriteLine("\nCalculating salary details...\n");
-            Console.WriteLine("Gross package: " + Salary.GrossSalary.ToString("C", CultureInfo.CurrentCulture));
-            Console.WriteLine("Superannuation: " + Salary.Superannuation.ToString("C", CultureInfo.CurrentCulture));
-            Console.WriteLine("\nTaxable income: " + Salary.TaxableIncome.ToString("C", CultureInfo.CurrentCulture));
+            Console.WriteLine("Gross package: " + salary.GrossSalary.ToString("C", CultureInfo.CurrentCulture));
+            Console.WriteLine("Superannuation: " + salary.Superannuation.ToString("C", CultureInfo.CurrentCulture));
+            Console.WriteLine("\nTaxable income: " + salary.TaxableIncome.ToString("C", CultureInfo.CurrentCulture));
 
             Console.WriteLine("\nDeductions:");
-            Console.WriteLine("Medicare Levy: " + Salary.MedicareLevy.ToString("C", CultureInfo.CurrentCulture));
-            Console.WriteLine("Budget Repair Levy: " + Salary.BudgetRepairLevy.ToString("C", CultureInfo.CurrentCulture));
+            Console.WriteLine("Medicare Levy: " + salary.MedicareLevy.ToString("C", CultureInfo.CurrentCulture));
+            Console.WriteLine("Budget Repair Levy: " + salary.BudgetRepairLevy.ToString("C", CultureInfo.CurrentCulture));
 
-            Console.WriteLine("Income Tax: " + Salary.IncomeTax.ToString("C", CultureInfo.CurrentCulture));
+            Console.WriteLine("Income Tax: " + salary.IncomeTax.ToString("C", CultureInfo.CurrentCulture));
 
-            Console.WriteLine("\nNet income: " + Salary.NetIncome.ToString("C", CultureInfo.CurrentCulture));
+            Console.WriteLine("\nNet income: " + salary.NetIncome.ToString("C", CultureInfo.CurrentCulture));
 
-            Console.WriteLine("Pay packet: " + Salary.PayPacket);
+            Console.WriteLine("Pay packet: " + salary.PayPacket);
 
             Console.WriteLine("\nPress any key to end...");
             Console.ReadKey();
