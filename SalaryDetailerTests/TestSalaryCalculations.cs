@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SalaryDetailer;
 
@@ -8,6 +10,10 @@ namespace SalaryDetailerTests
     [TestClass]
     public class TestSalaryCalculations
     {
+        private string _medicareLevyRulesPath = AppDomain.CurrentDomain.SetupInformation.ApplicationBase + @"\RuleFiles\MedicareLevyRules.csv";
+        private string _budgetRepairLevyRulesPath = AppDomain.CurrentDomain.SetupInformation.ApplicationBase + @"\RuleFiles\BudgetRepairLevyRules.csv";
+        private string _incomeTaxPath = AppDomain.CurrentDomain.SetupInformation.ApplicationBase + @"\RuleFiles\IncomeTaxRules.csv";
+
         private decimal CalculateTaxableIncome(decimal grossSalary, decimal superPercentage)
         {
             decimal taxableIncome = (grossSalary / ((100 + superPercentage) / 100));
@@ -23,7 +29,7 @@ namespace SalaryDetailerTests
             decimal grossSalary = 65000;
             decimal superPercentage = (decimal)9.5;
 
-            Salary s = new Salary(grossSalary, superPercentage, 'F');
+            Salary s = new Salary(grossSalary, superPercentage, 'F', _medicareLevyRulesPath, _budgetRepairLevyRulesPath, _incomeTaxPath);
             Assert.AreEqual(CalculateTaxableIncome(grossSalary, superPercentage), s.TaxableIncome);
         }
 
@@ -37,7 +43,7 @@ namespace SalaryDetailerTests
             decimal superPercentage = (decimal)9.5;
             decimal superannuation = grossSalary - (grossSalary / ((100 + superPercentage) / 100));
 
-            Salary s = new Salary(grossSalary, superPercentage, 'F');
+            Salary s = new Salary(grossSalary, superPercentage, 'F', _medicareLevyRulesPath, _budgetRepairLevyRulesPath, _incomeTaxPath);
             Assert.AreEqual(superannuation, s.Superannuation);
         }
 
@@ -50,7 +56,7 @@ namespace SalaryDetailerTests
             decimal grossSalary = 22000;
             decimal superPercentage = (decimal)9.5;
 
-            Salary s = new Salary(grossSalary, superPercentage, 'F');
+            Salary s = new Salary(grossSalary, superPercentage, 'F', _medicareLevyRulesPath, _budgetRepairLevyRulesPath, _incomeTaxPath);
             Assert.AreEqual(0, s.MedicareLevy);
         }
 
@@ -62,7 +68,7 @@ namespace SalaryDetailerTests
             decimal taxableIncome = CalculateTaxableIncome(grossSalary, superPercentage);
             decimal medicareLevy = decimal.Ceiling((taxableIncome - 21335) * (decimal)0.1);
 
-            Salary s = new Salary(grossSalary, superPercentage, 'F');
+            Salary s = new Salary(grossSalary, superPercentage, 'F', _medicareLevyRulesPath, _budgetRepairLevyRulesPath, _incomeTaxPath);
             Assert.AreEqual(medicareLevy, s.MedicareLevy);
         }
 
@@ -74,7 +80,7 @@ namespace SalaryDetailerTests
             decimal taxableIncome = CalculateTaxableIncome(grossSalary, superPercentage);
             decimal medicareLevy = decimal.Ceiling(taxableIncome * (decimal)0.02);
 
-            Salary s = new Salary(grossSalary, superPercentage, 'F');
+            Salary s = new Salary(grossSalary, superPercentage, 'F', _medicareLevyRulesPath, _budgetRepairLevyRulesPath, _incomeTaxPath);
             Assert.AreEqual(medicareLevy, s.MedicareLevy);
         }
 
@@ -87,7 +93,7 @@ namespace SalaryDetailerTests
             decimal grossSalary = 50000;
             decimal superPercentage = (decimal)9.5;
 
-            Salary s = new Salary(grossSalary, superPercentage, 'F');
+            Salary s = new Salary(grossSalary, superPercentage, 'F', _medicareLevyRulesPath, _budgetRepairLevyRulesPath, _incomeTaxPath);
             Assert.AreEqual(0, s.BudgetRepairLevy);
         }
 
@@ -99,7 +105,7 @@ namespace SalaryDetailerTests
             decimal taxableIncome = CalculateTaxableIncome(grossSalary, superPercentage);
             decimal budgetRepairLevy = decimal.Ceiling((taxableIncome - 180000) * (decimal)0.02);
 
-            Salary s = new Salary(grossSalary, superPercentage, 'F');
+            Salary s = new Salary(grossSalary, superPercentage, 'F', _medicareLevyRulesPath, _budgetRepairLevyRulesPath, _incomeTaxPath);
             Assert.AreEqual(budgetRepairLevy, s.BudgetRepairLevy);
         }
 
@@ -112,7 +118,7 @@ namespace SalaryDetailerTests
             decimal grossSalary = 18000;
             decimal superPercentage = (decimal)9.5;
 
-            Salary s = new Salary(grossSalary, superPercentage, 'F');
+            Salary s = new Salary(grossSalary, superPercentage, 'F', _medicareLevyRulesPath, _budgetRepairLevyRulesPath, _incomeTaxPath);
             Assert.AreEqual(0, s.IncomeTax);
         }
 
@@ -124,7 +130,7 @@ namespace SalaryDetailerTests
             decimal taxableIncome = CalculateTaxableIncome(grossSalary, superPercentage);
             decimal incomeTax = decimal.Ceiling((taxableIncome - 18200) * (decimal)0.19);
 
-            Salary s = new Salary(grossSalary, superPercentage, 'F');
+            Salary s = new Salary(grossSalary, superPercentage, 'F', _medicareLevyRulesPath, _budgetRepairLevyRulesPath, _incomeTaxPath);
             Assert.AreEqual(incomeTax, s.IncomeTax);
         }
 
@@ -136,31 +142,31 @@ namespace SalaryDetailerTests
             decimal taxableIncome = CalculateTaxableIncome(grossSalary, superPercentage);
             decimal incomeTax = 3572 + decimal.Ceiling((taxableIncome - 37000) * (decimal)0.325);
 
-            Salary s = new Salary(grossSalary, superPercentage, 'F');
+            Salary s = new Salary(grossSalary, superPercentage, 'F', _medicareLevyRulesPath, _budgetRepairLevyRulesPath, _incomeTaxPath);
             Assert.AreEqual(incomeTax, s.IncomeTax);
         }
 
         [TestMethod]
         public void TestIncomeTaxWhenTaxableIncomeIsLessThan180000()
         {
-            decimal grossSalary = 150000;
+            decimal grossSalary = 104025;
             decimal superPercentage = (decimal)9.5;
             decimal taxableIncome = CalculateTaxableIncome(grossSalary, superPercentage);
             decimal incomeTax = 19822 + decimal.Ceiling((taxableIncome - 87000) * (decimal)0.37);
 
-            Salary s = new Salary(grossSalary, superPercentage, 'F');
+            Salary s = new Salary(grossSalary, superPercentage, 'F', _medicareLevyRulesPath, _budgetRepairLevyRulesPath, _incomeTaxPath);
             Assert.AreEqual(incomeTax, s.IncomeTax);
         }
 
         [TestMethod]
         public void TestIncomeTaxWhenTaxableIncomeIsGreaterThan180001()
         {
-            decimal grossSalary = 210000;
+            decimal grossSalary = 219000;
             decimal superPercentage = (decimal)9.5;
             decimal taxableIncome = CalculateTaxableIncome(grossSalary, superPercentage);
             decimal incomeTax = 54232 + decimal.Ceiling((taxableIncome - 180000) * (decimal)0.47);
 
-            Salary s = new Salary(grossSalary, superPercentage, 'F');
+            Salary s = new Salary(grossSalary, superPercentage, 'F', _medicareLevyRulesPath, _budgetRepairLevyRulesPath, _incomeTaxPath);
             Assert.AreEqual(incomeTax, s.IncomeTax);
         }
 
@@ -177,7 +183,7 @@ namespace SalaryDetailerTests
             decimal taxableIncome = CalculateTaxableIncome(grossSalary, superPercentage);
             string payPacket = ((decimal)((taxableIncome / 365) * 7)).ToString("C", CultureInfo.CurrentCulture) + " per week";
 
-            Salary s = new Salary(grossSalary, superPercentage, 'W');
+            Salary s = new Salary(grossSalary, superPercentage, 'W', _medicareLevyRulesPath, _budgetRepairLevyRulesPath, _incomeTaxPath);
             Assert.AreEqual(payPacket, s.PayPacket);
         }
 
@@ -189,7 +195,7 @@ namespace SalaryDetailerTests
             decimal taxableIncome = CalculateTaxableIncome(grossSalary, superPercentage);
             string payPacket = ((decimal)((taxableIncome / 365) * 14)).ToString("C", CultureInfo.CurrentCulture) + " per fortnight";
 
-            Salary s = new Salary(grossSalary, superPercentage, 'F');
+            Salary s = new Salary(grossSalary, superPercentage, 'F', _medicareLevyRulesPath, _budgetRepairLevyRulesPath, _incomeTaxPath);
             Assert.AreEqual(payPacket, s.PayPacket);
         }
 
@@ -201,7 +207,7 @@ namespace SalaryDetailerTests
             decimal taxableIncome = CalculateTaxableIncome(grossSalary, superPercentage);
             string payPacket = ((decimal)(taxableIncome / 12)).ToString("C", CultureInfo.CurrentCulture) + " per month";
 
-            Salary s = new Salary(grossSalary, superPercentage, 'M');
+            Salary s = new Salary(grossSalary, superPercentage, 'M', _medicareLevyRulesPath, _budgetRepairLevyRulesPath, _incomeTaxPath);
             Assert.AreEqual(payPacket, s.PayPacket);
         }
 
@@ -215,7 +221,7 @@ namespace SalaryDetailerTests
             decimal superPercentage = (decimal)9.5;
             decimal taxableIncome = CalculateTaxableIncome(grossSalary, superPercentage);
 
-            Salary s = new Salary(grossSalary, superPercentage, 'M');
+            Salary s = new Salary(grossSalary, superPercentage, 'M', _medicareLevyRulesPath, _budgetRepairLevyRulesPath, _incomeTaxPath);
             Assert.AreEqual(taxableIncome, s.NetIncome);
         }
 
@@ -231,7 +237,7 @@ namespace SalaryDetailerTests
             decimal incomeTax = decimal.Ceiling((taxableIncome - 18200) * (decimal)0.19);
             decimal netIncome = grossSalary - superannuation - medicareLevy - incomeTax;
 
-            Salary s = new Salary(grossSalary, superPercentage, 'M');
+            Salary s = new Salary(grossSalary, superPercentage, 'M', _medicareLevyRulesPath, _budgetRepairLevyRulesPath, _incomeTaxPath);
             Assert.AreEqual(netIncome, s.NetIncome);
         }
 
@@ -247,7 +253,7 @@ namespace SalaryDetailerTests
             decimal incomeTax = decimal.Ceiling((taxableIncome - 18200) * (decimal)0.19);
             decimal netIncome = grossSalary - superannuation - medicareLevy - incomeTax;
 
-            Salary s = new Salary(grossSalary, superPercentage, 'M');
+            Salary s = new Salary(grossSalary, superPercentage, 'M', _medicareLevyRulesPath, _budgetRepairLevyRulesPath, _incomeTaxPath);
             Assert.AreEqual(netIncome, s.NetIncome);
         }
 
@@ -263,7 +269,7 @@ namespace SalaryDetailerTests
             decimal incomeTax = 3572 + decimal.Ceiling((taxableIncome - 37000) * (decimal)0.325);
             decimal netIncome = grossSalary - superannuation - medicareLevy - incomeTax;
 
-            Salary s = new Salary(grossSalary, superPercentage, 'M');
+            Salary s = new Salary(grossSalary, superPercentage, 'M', _medicareLevyRulesPath, _budgetRepairLevyRulesPath, _incomeTaxPath);
             Assert.AreEqual(netIncome, s.NetIncome);
         }
 
@@ -279,7 +285,7 @@ namespace SalaryDetailerTests
             decimal incomeTax = 19822 + decimal.Ceiling((taxableIncome - 87000) * (decimal)0.37);
             decimal netIncome = grossSalary - superannuation - medicareLevy - incomeTax;
 
-            Salary s = new Salary(grossSalary, superPercentage, 'M');
+            Salary s = new Salary(grossSalary, superPercentage, 'M', _medicareLevyRulesPath, _budgetRepairLevyRulesPath, _incomeTaxPath);
             Assert.AreEqual(netIncome, s.NetIncome);
         }
 
@@ -296,7 +302,7 @@ namespace SalaryDetailerTests
             decimal incomeTax = 54232 + decimal.Ceiling((taxableIncome - 180000) * (decimal)0.47);
             decimal netIncome = grossSalary - superannuation - medicareLevy - budgetRepairLevy - incomeTax;
 
-            Salary s = new Salary(grossSalary, superPercentage, 'M');
+            Salary s = new Salary(grossSalary, superPercentage, 'M', _medicareLevyRulesPath, _budgetRepairLevyRulesPath, _incomeTaxPath);
             Assert.AreEqual(netIncome, s.NetIncome);
         }
     }

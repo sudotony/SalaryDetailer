@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -39,79 +41,194 @@ namespace SalaryDetailer
         private string _payPacket;
         public string PayPacket { get { return _payPacket; } set { _payPacket = value; } }
 
+        private List<CalculationRule> _medicareLevyRules;
+        public List<CalculationRule> MedicareLevyRules { get { return _medicareLevyRules; } }
+
+        private List<CalculationRule> _budgetRepairLevyRules;
+        public List<CalculationRule> BudgetRepairLevyRules { get { return _budgetRepairLevyRules; } }
+
+        private List<CalculationRule> _incomeTaxRules;
+        public List<CalculationRule> IncomeTaxRules { get { return _incomeTaxRules; } }
+
         /*
-         * TODO Create a data type to store the taxable income threshold & a string mathematical expression
-         * e.g.
-         * 21335,0
-         * 26668,{TI}-(21335*0.1)
+         * A basic struct to store the calculation rules.
+         * lower and upper thresholds specify the taxable income range
+         * The expression is a mathematical string with a substring TI that is to be replaced with the taxable income. 
          */
-
-        public Salary(decimal grossSalary, decimal superannuationPercentage, char payFrequency)
+        public struct CalculationRule
         {
-            _grossSalary = grossSalary;
-            _payFrequency = payFrequency;
-            _superannuationPercentage = superannuationPercentage;
+            public int lowerThreshold;
+            public int upperThreshold;
+            public string expression;
 
-            CalculateTaxableIncome();
-            CalculateSuperannuation();
-            CalculateMedicareLevy();
-            CalculateBudgetRepairLevy();
-            CalculateIncomeTax();
-            CalculateNetIncome();
-            CalculatePayPacket();
+            public CalculationRule(int p1, int p2, string p3)
+            {
+                lowerThreshold = p1;
+                upperThreshold = p2;
+                expression = p3;
+            }
         }
 
+        /*
+         * Constructor.
+         * 
+         * Everything is calculated on construction. This has been choosen because of the simplicity of the program. After all input has been entered, all details are then displayed to the user.
+         * 
+         * If the information were to be calculated at different times, perhaps these values would be generated at different times.
+         */
+        public Salary(decimal grossSalary, decimal superannuationPercentage, char payFrequency, string medicareLevyRulesPath, string budgetRepairLevyRulesPath, string incomeTaxPath)
+        {
+            try
+            {
+                _grossSalary = grossSalary;
+                _superannuationPercentage = superannuationPercentage;
+                _payFrequency = payFrequency;
+
+                _medicareLevyRules = new List<CalculationRule>();
+                _budgetRepairLevyRules = new List<CalculationRule>();
+                _incomeTaxRules = new List<CalculationRule>();
+
+                // I've chosen to pass the List of CalculationRules by ref to easily add new rules.
+                LoadCalculationRules(medicareLevyRulesPath, ref _medicareLevyRules);
+                LoadCalculationRules(budgetRepairLevyRulesPath, ref _budgetRepairLevyRules);
+                LoadCalculationRules(incomeTaxPath, ref _incomeTaxRules);
+
+                CalculateTaxableIncome();
+                CalculateSuperannuation();
+                CalculateMedicareLevy();
+                CalculateBudgetRepairLevy();
+                CalculateIncomeTax();
+                CalculateNetIncome();
+                CalculatePayPacket();
+            }
+            catch (Exception ex)
+            {
+                // for exceptions i haven't thought about :(
+                Console.WriteLine("An unhandled exception has occurred. Please review the exception message and report to your administrator.");
+                Console.WriteLine(ex.Message);
+            }
+        }
+
+        /*
+         * This same function is used for all of the different Rule Files. All of the Rule Files have the same syntax and format.
+         */
+        private void LoadCalculationRules(string filepath, ref List<CalculationRule> calculationRules)
+        {
+            try
+            {
+                //https://stackoverflow.com/questions/5282999/reading-csv-file-and-storing-values-into-an-array
+                //referencing stackoverflow for this specific code because it's almost verbatim.
+                using (var reader = new StreamReader(filepath))
+                {
+                    while (!reader.EndOfStream)
+                    {
+                        var line = reader.ReadLine();
+                        var values = line.Split(',');
+
+                        try
+                        {
+                            CalculationRule calculationRule = new CalculationRule(int.Parse(values[0]), int.Parse(values[1]), values[2]);
+                            calculationRules.Add(calculationRule);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine("There has been an exception trying to parse one of the calculation rules. Please check the file for any errors.");
+                            Console.WriteLine(filepath);
+                            Console.WriteLine(ex.Message);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("There has been an exception trying to load one of the Rule Files. Please check if the file exists and if permissions are valid.");
+                Console.WriteLine(filepath);
+                Console.WriteLine(ex.Message);
+            }
+        }
+
+        /*
+         * Very basic taxable income calculation
+         */
         private void CalculateTaxableIncome()
         {
             _taxableIncome = _grossSalary / ((100 + _superannuationPercentage) / 100);
         }
 
+        /*
+         * Very basic superannuation calculation
+         */
         private void CalculateSuperannuation()
         {
             _superannuation = _grossSalary - _taxableIncome;
         }
 
+        /*
+         * The Rule Files have been designed in such a way that the same function can perform the calculations for all three Medicare, Budget and Income.
+         */
+        private void CalculateRule(List<CalculationRule> rules, ref decimal deduction)
+        {
+            foreach (CalculationRule cr in rules)
+            {
+                // where the upper threshold is 0, there is no upper limit 
+                if (_taxableIncome >= cr.lowerThreshold && (_taxableIncome <= cr.upperThreshold || cr.upperThreshold == 0))
+                {
+                    string expression = cr.expression.Replace("TI", _taxableIncome.ToString());
+
+                    DataTable dt = new DataTable();
+                    // where the expression 0, there is formula to compute. 
+                    try
+                    {
+                        deduction = expression.Equals("0") ? 0 : decimal.Ceiling((decimal)dt.Compute(expression, ""));
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("There has been an exception trying to execute one of the Rule File expressions. Please check the expression and file for any errors.");
+                        Console.WriteLine(expression);
+                        Console.WriteLine(ex.Message);
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        /*
+         * Medicare Levy utilises Rule Files
+         */
         private void CalculateMedicareLevy()
         {
-            decimal medicareLevy = 0;
-            if (_taxableIncome > 21335 && _taxableIncome <= 26668)
-                medicareLevy = (_taxableIncome - 21335) * (decimal)0.1;
-            else if (_taxableIncome > 26669)
-                medicareLevy = _taxableIncome * (decimal)0.02;
-
-            _medicareLevy = decimal.Ceiling(medicareLevy);
+            CalculateRule(_medicareLevyRules, ref _medicareLevy);
         }
 
+        /*
+         * Bduget Repair Levy utilises Rule Files
+         */
         private void CalculateBudgetRepairLevy()
         {
-            decimal budgetRepairLevy = 0;
-            if (_taxableIncome > 180000)
-                budgetRepairLevy = (_taxableIncome - 180000) * (decimal)0.02;
-
-            _budgetRepairLevy = decimal.Ceiling(budgetRepairLevy);
+            CalculateRule(_budgetRepairLevyRules, ref _budgetRepairLevy);
         }
 
+        /*
+         * Income Tax Levy utilises Rule Files
+         */
         private void CalculateIncomeTax()
         {
-            decimal incomeTax = 0;
-            if (_taxableIncome > 18200 && _taxableIncome <= 37000)
-                incomeTax = (_taxableIncome - 18200) * (decimal)0.19;
-            else if (_taxableIncome > 37000 && _taxableIncome <= 87000)
-                incomeTax = 3572 + ((_taxableIncome - 37000) * (decimal)0.325);
-            else if (_taxableIncome > 87000 && _taxableIncome <= 180000)
-                incomeTax = 19822 + ((_taxableIncome - 87000) * (decimal)0.37);
-            else if (_taxableIncome > 180001)
-                incomeTax = 54232 + ((_taxableIncome - 180000) * (decimal)0.47);
-
-            _incomeTax = decimal.Ceiling(incomeTax);
+            CalculateRule(_incomeTaxRules, ref _incomeTax);
         }
 
+        /*
+         * Very basic Net Income calculation
+         */
         private void CalculateNetIncome()
         {
             decimal netIncome = _grossSalary - _superannuation - _medicareLevy - _budgetRepairLevy - _incomeTax;
             _netIncome = netIncome;
         }
 
+        /*
+         * This pay packet function assumes that the pay packet character has been validated and massaged (ToUpper).
+         */
         private void CalculatePayPacket()
         {
             string payPacket;

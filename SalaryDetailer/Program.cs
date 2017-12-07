@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Globalization;
 using System.IO;
+using System.Diagnostics;
 
 namespace SalaryDetailer
 {
@@ -14,10 +15,10 @@ namespace SalaryDetailer
         static void Main(string[] args)
         {
             /*
-                * Read user input for salary package amount. 
-                * Strip known valid characters.
-                * try parse; whilst false
-                */
+            * Read user input for salary package amount. 
+            * Strip known valid characters.
+            * try parse; loop whilst false.
+            */
 
             Console.Write("Enter your salary package amount: ");
             string input = Console.ReadLine();
@@ -39,7 +40,7 @@ namespace SalaryDetailer
             /*
             * Read user input for pay frequency. 
             * Massage the input, grab the first character.
-            * Validate input; whilst false
+            * Validate input; loop whilst false.
             */
             Console.Write("Enter your pay frequency (W for weekly, F for fortnightly, M for monthly): ");
             char payFreq = Console.ReadLine().ToUpper()[0];
@@ -51,12 +52,26 @@ namespace SalaryDetailer
                 Console.Write("Enter your pay frequency (W for weekly, F for fortnightly, M for monthly): ");
                 payFreq = Console.ReadLine().ToUpper()[0];
             }
+
             /*
-            * Get super percentage from App Settings
-            * Instantiate new 
+            * Get super percentage from App Settings. Considering that the RuleFiles are separated, perhaps the Super Amount should be too?
+            * Ideally, super percentage would be another user input, but this is to spec.
             */
             decimal.TryParse(ConfigurationManager.AppSettings["superannuationPercentage"], out decimal superannuationPercentage);
-            Salary Salary = new Salary(grossSalary, superannuationPercentage, payFreq);
+
+            /*
+             * Paths to rule files
+             */
+            string folder = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName) + @"\RuleFiles\";
+            string medicareLevyRulesPath = folder + "MedicareLevyRules.csv";
+            string budgetRepairLevyRulesPath = folder + "BudgetRepairLevyRules.csv";
+            string incomeTaxPath = folder + "IncomeTaxRules.csv";
+
+            /*
+            * Instantiate new Salary class / object
+            * Calculations are performed on construction
+            */
+            Salary Salary = new Salary(grossSalary, superannuationPercentage, payFreq, medicareLevyRulesPath, budgetRepairLevyRulesPath, incomeTaxPath);
 
             Console.WriteLine("\nCalculating salary details...\n");
             Console.WriteLine("Gross package: " + Salary.GrossSalary.ToString("C", CultureInfo.CurrentCulture));
@@ -73,7 +88,7 @@ namespace SalaryDetailer
 
             Console.WriteLine("Pay packet: " + Salary.PayPacket);
 
-            Console.Write("\nPress any key to end...");
+            Console.WriteLine("\nPress any key to end...");
             Console.ReadKey();
         }
     }
