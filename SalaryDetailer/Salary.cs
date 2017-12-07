@@ -3,9 +3,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SalaryDetailer
 {
@@ -42,13 +39,8 @@ namespace SalaryDetailer
         public string PayPacket { get { return _payPacket; } set { _payPacket = value; } }
 
         private List<CalculationRule> _medicareLevyRules;
-        public List<CalculationRule> MedicareLevyRules { get { return _medicareLevyRules; } }
-
         private List<CalculationRule> _budgetRepairLevyRules;
-        public List<CalculationRule> BudgetRepairLevyRules { get { return _budgetRepairLevyRules; } }
-
         private List<CalculationRule> _incomeTaxRules;
-        public List<CalculationRule> IncomeTaxRules { get { return _incomeTaxRules; } }
 
         /*
          * A basic struct to store the calculation rules.
@@ -176,9 +168,9 @@ namespace SalaryDetailer
                     string expression = cr.expression.Replace("TI", _taxableIncome.ToString());
 
                     DataTable dt = new DataTable();
-                    // where the expression 0, there is formula to compute. 
                     try
                     {
+                        // where the expression 0, there is no formula to compute. 
                         deduction = expression.Equals("0") ? 0 : decimal.Ceiling((decimal)dt.Compute(expression, ""));
                     }
                     catch (Exception ex)
@@ -188,6 +180,9 @@ namespace SalaryDetailer
                         Console.WriteLine(ex.Message);
                     }
 
+                    // Not sure if I like using break. 
+                    // But, once we've reached this part of the execution there's no longer any need to continue the loop.
+                    // Doing so will do no harm, but breaking will also do no harm.
                     break;
                 }
             }

@@ -1,9 +1,5 @@
 ﻿using System;
 using System.Configuration;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Globalization;
 using System.IO;
 using System.Diagnostics;
@@ -19,7 +15,6 @@ namespace SalaryDetailer
             * Strip known valid characters.
             * try parse; loop whilst false.
             */
-
             Console.Write("Enter your salary package amount: ");
             string input = Console.ReadLine();
             input = input.Replace(CultureInfo.CurrentUICulture.NumberFormat.NumberGroupSeparator, "");
